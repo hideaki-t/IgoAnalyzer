@@ -2,13 +2,11 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package net.sf.janalyzers.igoanalyzer;
+package net.sf.igoanalyzer;
 
-import net.sf.janalyzers.igoanalyzer.IgoAnalyzer;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
-import java.util.HashMap;
 import java.util.HashSet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.util.Version;
@@ -53,8 +51,8 @@ public class IgoAnalyzerTest {
         String fieldName = "";
         Reader reader = new StringReader("これはテストの文字列です。解析が出来たら成功です。おわり  ");
         try {
-            IgoAnalyzer instance = new IgoAnalyzer(Version.LUCENE_29,
-                    "c:\\users\\hideaki\\dev\\ipadic", new HashSet<String>());
+            IgoAnalyzer instance = new IgoAnalyzer(Version.LUCENE_31,
+                    "ipadic", new HashSet<String>());
             TokenStream expResult = null;
             TokenStream result = instance.tokenStream(fieldName, reader);
             System.out.println(result);
@@ -76,8 +74,8 @@ public class IgoAnalyzerTest {
         String fieldName = "";
         Reader reader = new StringReader("これはテストの文字列です。解析が出来たら成功です。おわり");
         try {
-            IgoAnalyzer instance = new IgoAnalyzer(Version.LUCENE_29,
-                    "c:\\users\\hideaki\\dev\\ipadic", new HashSet<String>());
+            IgoAnalyzer instance = new IgoAnalyzer(Version.LUCENE_31,
+                    "ipadic", new HashSet<String>());
             TokenStream expResult = null;
             TokenStream result = instance.reusableTokenStream(fieldName, reader);
             while (result.incrementToken()) {

@@ -1,4 +1,4 @@
-package net.sf.janalyzers.igoanalyzer;
+package net.sf.igoanalyzer;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -38,13 +38,13 @@ public class IgoAnalyzer extends Analyzer {
     }
 
     @Override
-    public TokenStream tokenStream(String fieldName, Reader reader) {
+    public final TokenStream tokenStream(String fieldName, Reader reader) {
         return new StopFilter(StopFilter.getEnablePositionIncrementsVersionDefault(matchVersion),
                 new IgoTokenizer(reader, tagger), stopTable);
     }
 
     @Override
-    public TokenStream reusableTokenStream(String fieldName, Reader reader) throws IOException {
+    public final TokenStream reusableTokenStream(String fieldName, Reader reader) throws IOException {
         SavedStreams streams = (SavedStreams)getPreviousTokenStream();
         if (streams == null) {
             IgoTokenizer i = new IgoTokenizer(reader, tagger);

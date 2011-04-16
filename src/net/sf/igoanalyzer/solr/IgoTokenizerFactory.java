@@ -1,9 +1,9 @@
-package net.sf.janalyzers.solr;
+package net.sf.igoanalyzer.solr;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Map;
-import net.sf.janalyzers.igoanalyzer.IgoTokenizer;
+import net.sf.igoanalyzer.IgoTokenizer;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.solr.analysis.BaseTokenizerFactory;
 

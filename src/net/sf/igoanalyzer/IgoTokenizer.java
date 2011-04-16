@@ -1,7 +1,7 @@
 /**
  * Takahashi Hideaki <mymelo@gmail.com>
  */
-package net.sf.janalyzers.igoanalyzer;
+package net.sf.igoanalyzer;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -20,7 +20,7 @@ import org.apache.lucene.util.AttributeSource;
 /**
  * Igoを使ったTokenizer.
  */
-public class IgoTokenizer extends Tokenizer {
+public final class IgoTokenizer extends Tokenizer {
 
     /** 形態素解析器. */
     private final Tagger tagger;
@@ -56,10 +56,10 @@ public class IgoTokenizer extends Tokenizer {
     public IgoTokenizer(final Reader input, final Tagger tagger) {
         super(input);
         this.tagger = tagger;
-        offsetAttr = (OffsetAttribute)addAttribute(OffsetAttribute.class);
-        termAttr = (TermAttribute)addAttribute(TermAttribute.class);
-        incrAttr = (PositionIncrementAttribute)addAttribute(PositionIncrementAttribute.class);
-        typeAttr = (TypeAttribute)addAttribute(TypeAttribute.class);
+        offsetAttr = (OffsetAttribute) addAttribute(OffsetAttribute.class);
+        termAttr = (TermAttribute) addAttribute(TermAttribute.class);
+        incrAttr = (PositionIncrementAttribute) addAttribute(PositionIncrementAttribute.class);
+        typeAttr = (TypeAttribute) addAttribute(TypeAttribute.class);
     }
 
     /**
@@ -72,10 +72,10 @@ public class IgoTokenizer extends Tokenizer {
             final Reader input, final Tagger tagger) {
         super(source, input);
         this.tagger = tagger;
-        offsetAttr = (OffsetAttribute)addAttribute(OffsetAttribute.class);
-        termAttr = (TermAttribute)addAttribute(TermAttribute.class);
-        incrAttr = (PositionIncrementAttribute)addAttribute(PositionIncrementAttribute.class);
-        typeAttr = (TypeAttribute)addAttribute(TypeAttribute.class);
+        offsetAttr = (OffsetAttribute) addAttribute(OffsetAttribute.class);
+        termAttr = (TermAttribute) addAttribute(TermAttribute.class);
+        incrAttr = (PositionIncrementAttribute) addAttribute(PositionIncrementAttribute.class);
+        typeAttr = (TypeAttribute) addAttribute(TypeAttribute.class);
     }
 
     /**
@@ -88,10 +88,10 @@ public class IgoTokenizer extends Tokenizer {
             final Reader input, final Tagger tagger) {
         super(factory, input);
         this.tagger = tagger;
-        offsetAttr = (OffsetAttribute)addAttribute(OffsetAttribute.class);
-        termAttr = (TermAttribute)addAttribute(TermAttribute.class);
-        incrAttr = (PositionIncrementAttribute)addAttribute(PositionIncrementAttribute.class);
-        typeAttr = (TypeAttribute)addAttribute(TypeAttribute.class);
+        offsetAttr = (OffsetAttribute) addAttribute(OffsetAttribute.class);
+        termAttr = (TermAttribute) addAttribute(TermAttribute.class);
+        incrAttr = (PositionIncrementAttribute) addAttribute(PositionIncrementAttribute.class);
+        typeAttr = (TypeAttribute) addAttribute(TypeAttribute.class);
     }
 
     @Override
@@ -162,10 +162,10 @@ public class IgoTokenizer extends Tokenizer {
     }
 
     private void p(final Matcher matcher) {
-            tagger.parse(matcher.group(), remainMorphemes);
-            offset = nextOffset;
-            nextOffset = offset + matcher.group().length();
-            buf.delete(0, matcher.end());
+        tagger.parse(matcher.group(), remainMorphemes);
+        offset = nextOffset;
+        nextOffset = offset + matcher.group().length();
+        buf.delete(0, matcher.end());
     }
 
     /**
