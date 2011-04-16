@@ -1,60 +1,39 @@
 package net.sf.igoanalyzer;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.util.Set;
-import net.reduls.igo.Tagger;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.LowerCaseFilter;
 import org.apache.lucene.analysis.StopFilter;
+import org.apache.lucene.analysis.StopwordAnalyzerBase;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.ja.JapaneseBasicFormFilter;
+import org.apache.lucene.analysis.ja.JapaneseKatakanaStemFilter;
+import org.apache.lucene.analysis.ja.JapanesePartOfSpeechStopFilter;
 import org.apache.lucene.util.Version;
 
 /**
  *
  * @author hideaki
  */
-public class IgoAnalyzer extends Analyzer {
-    private final Version matchVersion;
-    private final Set<?> stopTable;
-    private final Tagger tagger;
+public class IgoAnalyzer extends StopwordAnalyzerBase {
+    private final Set<String> stopTags;
 
-    public IgoAnalyzer(Version matchVersion, String path, Set<String> stopWords) throws IOException {
-        this.matchVersion = matchVersion;
-        stopTable = CharArraySet.unmodifiableSet(new CharArraySet(stopWords, true));
-//        stopTable = CharArraySet.unmodifiableSet(CharArraySet.copy(stopWords));
-        tagger = new Tagger(path);
-    }
-
-    private class SavedStreams {
-        final Tokenizer source;
-        final TokenStream result;
-
-        public SavedStreams(Tokenizer source, TokenStream result) {
-            this.source = source;
-            this.result = result;
-        }
+    public IgoAnalyzer(Version version, Set<String> stopWords,
+            Set<String> stopTags) {
+        super(version, stopWords);
+        this.stopTags = stopTags;
     }
 
     @Override
-    public final TokenStream tokenStream(String fieldName, Reader reader) {
-        return new StopFilter(StopFilter.getEnablePositionIncrementsVersionDefault(matchVersion),
-                new IgoTokenizer(reader, tagger), stopTable);
-    }
-
-    @Override
-    public final TokenStream reusableTokenStream(String fieldName, Reader reader) throws IOException {
-        SavedStreams streams = (SavedStreams)getPreviousTokenStream();
-        if (streams == null) {
-            IgoTokenizer i = new IgoTokenizer(reader, tagger);
-            TokenStream s = new StopFilter(StopFilter.getEnablePositionIncrementsVersionDefault(matchVersion), i, stopTable);
-            streams = new SavedStreams(i, s);
-            setPreviousTokenStream(streams);
-        } else {
-            streams.source.reset(reader);
-        }
-        return streams.result;
+    protected TokenStreamComponents createComponents(String field, Reader reader) {
+        Tokenizer tokenizer = new IgoTokenizer(reader);
+        TokenStream stream = new org.apache.lucene.analysis.ja.JapanesePunctuationFilter(true, tokenizer);
+        stream = new JapaneseBasicFormFilter(tokenizer);
+        stream = new JapanesePartOfSpeechStopFilter(true, tokenizer, stopTags);
+        stream = new StopFilter(matchVersion, stream, stopwords);
+        stream = new LowerCaseFilter(matchVersion, stream);
+        stream = new JapaneseKatakanaStemFilter(stream);
+        return new TokenStreamComponents(tokenizer, stream);
     }
 }
-

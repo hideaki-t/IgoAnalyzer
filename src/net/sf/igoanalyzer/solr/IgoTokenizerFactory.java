@@ -26,23 +26,6 @@ public class IgoTokenizerFactory extends BaseTokenizerFactory {
 
     @Override
     public Tokenizer create(final Reader reader) {
-        try {
-            return new IgoTokenizer(reader, dicPath);
-        } catch (IOException e) {
-            throw new FactoryException(e);
-        }
-    }
-
-    /**
-     * Thrown if instantiation failed.
-     */
-    private static final class FactoryException extends RuntimeException {
-
-        /**
-         * @param cause Nested exception.
-         */
-        FactoryException(final Exception cause) {
-            super(cause);
-        }
+        return new IgoTokenizer(reader, dicPath);
     }
 }

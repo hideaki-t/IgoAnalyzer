@@ -3,6 +3,7 @@
  */
 package net.sf.igoanalyzer;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.LinkedList;
@@ -11,9 +12,9 @@ import java.util.regex.Pattern;
 import net.reduls.igo.Morpheme;
 import net.reduls.igo.Tagger;
 import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.ja.NormalizeReader;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.util.AttributeSource;
 
@@ -26,26 +27,42 @@ public final class IgoTokenizer extends Tokenizer {
     private final Tagger tagger;
     /** 1フレーズ分の形態素解析結果. */
     private final LinkedList<Morpheme> remainMorphemes = new LinkedList<Morpheme>();
-    private final OffsetAttribute offsetAttr;
-    private final TermAttribute termAttr;
-    private final PositionIncrementAttribute incrAttr;
-    private final TypeAttribute typeAttr;
+
+    // attributes
+    private final CharTermAttribute termAttr = addAttribute(CharTermAttribute.class);
+    private final OffsetAttribute offsetAttr = addAttribute(OffsetAttribute.class);
+    private final TypeAttribute typeAttr = addAttribute(TypeAttribute.class);
+    //private final PositionIncrementAttribute incrAttr = addAttribute(PositionIncrementAttribute.class);
+    
     private final Pattern punctuation = Pattern.compile(".+\\p{Po}");
     /** 今のオフセット */
     private int offset;
     /** 次回のオフセット */
     private int nextOffset;
     private final StringBuilder buf = new StringBuilder();
-    // TODO: to be configurable
 
     /**
      * Igoで使うバイナリ辞書の場所を指定してインスタンスを作成する
      * @param input
      * @param path バイナリ辞書のパス
-     * @throws IOException バイナリ辞書読み込み中にエラーが起きると発生する
      */
-    public IgoTokenizer(final Reader input, final String path) throws IOException {
-        this(input, new Tagger(path));
+    public IgoTokenizer(final Reader input, final String path) {
+        super(new NormalizeReader(input));
+        try {
+            this.tagger = new Tagger(path);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public IgoTokenizer(final Reader input) {
+        super(new NormalizeReader(input));
+        try {
+            String path = Tagger.class.getResource("/ipadic").getPath();
+            this.tagger = new Tagger(path);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -56,10 +73,6 @@ public final class IgoTokenizer extends Tokenizer {
     public IgoTokenizer(final Reader input, final Tagger tagger) {
         super(input);
         this.tagger = tagger;
-        offsetAttr = (OffsetAttribute) addAttribute(OffsetAttribute.class);
-        termAttr = (TermAttribute) addAttribute(TermAttribute.class);
-        incrAttr = (PositionIncrementAttribute) addAttribute(PositionIncrementAttribute.class);
-        typeAttr = (TypeAttribute) addAttribute(TypeAttribute.class);
     }
 
     /**
@@ -72,10 +85,6 @@ public final class IgoTokenizer extends Tokenizer {
             final Reader input, final Tagger tagger) {
         super(source, input);
         this.tagger = tagger;
-        offsetAttr = (OffsetAttribute) addAttribute(OffsetAttribute.class);
-        termAttr = (TermAttribute) addAttribute(TermAttribute.class);
-        incrAttr = (PositionIncrementAttribute) addAttribute(PositionIncrementAttribute.class);
-        typeAttr = (TypeAttribute) addAttribute(TypeAttribute.class);
     }
 
     /**
@@ -88,10 +97,6 @@ public final class IgoTokenizer extends Tokenizer {
             final Reader input, final Tagger tagger) {
         super(factory, input);
         this.tagger = tagger;
-        offsetAttr = (OffsetAttribute) addAttribute(OffsetAttribute.class);
-        termAttr = (TermAttribute) addAttribute(TermAttribute.class);
-        incrAttr = (PositionIncrementAttribute) addAttribute(PositionIncrementAttribute.class);
-        typeAttr = (TypeAttribute) addAttribute(TypeAttribute.class);
     }
 
     @Override
@@ -103,20 +108,14 @@ public final class IgoTokenizer extends Tokenizer {
             }
         }
         final Morpheme morpheme = remainMorphemes.removeFirst();
-        final int len = morpheme.surface.length();
-        char[] buffer = termAttr.termBuffer();
-        if (len > buffer.length) {
-            buffer = termAttr.resizeTermBuffer(len);
-        }
-        morpheme.surface.getChars(0, len, buffer, 0);
-        termAttr.setTermLength(len);
         final int start = offset + morpheme.start;
-        final int end = start + len;
+        final int end = start + morpheme.surface.length();
+        termAttr.setEmpty().append(morpheme.surface);
         offsetAttr.setOffset(
                 correctOffset(start),
                 correctOffset(end));
-        incrAttr.setPositionIncrement(1);
         typeAttr.setType(morpheme.feature);
+        //incrAttr.setPositionIncrement(1);
         // FlagsAttribute
         // PayloadAttribute
         return true;
@@ -126,15 +125,6 @@ public final class IgoTokenizer extends Tokenizer {
     public void end() throws IOException {
         final int endOffset = correctOffset(nextOffset);
         offsetAttr.setOffset(endOffset, endOffset);
-    }
-
-    @Override
-    public void reset() throws IOException {
-        super.reset();
-        remainMorphemes.clear();
-        buf.setLength(0);
-        offset = 0;
-        nextOffset = 0;
     }
 
     @Override

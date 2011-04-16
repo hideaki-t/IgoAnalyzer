@@ -4,7 +4,6 @@
  */
 package net.sf.igoanalyzer;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashSet;
@@ -52,12 +51,13 @@ public class IgoAnalyzerTest {
         Reader reader = new StringReader("これはテストの文字列です。解析が出来たら成功です。おわり  ");
         try {
             IgoAnalyzer instance = new IgoAnalyzer(Version.LUCENE_31,
-                    "ipadic", new HashSet<String>());
+                    new HashSet<String>(),
+                    new HashSet<String>());
             TokenStream expResult = null;
             TokenStream result = instance.tokenStream(fieldName, reader);
             System.out.println(result);
             assertEquals(expResult, result);
-        } catch (IOException ioe) {
+        } catch (RuntimeException ioe) {
             ioe.printStackTrace();
             fail();
         }
@@ -75,14 +75,14 @@ public class IgoAnalyzerTest {
         Reader reader = new StringReader("これはテストの文字列です。解析が出来たら成功です。おわり");
         try {
             IgoAnalyzer instance = new IgoAnalyzer(Version.LUCENE_31,
-                    "ipadic", new HashSet<String>());
+                    new HashSet<String>(), new HashSet<String>());
             TokenStream expResult = null;
             TokenStream result = instance.reusableTokenStream(fieldName, reader);
             while (result.incrementToken()) {
                 System.out.println(result);
             }
             assertEquals(expResult, result);
-        } catch (IOException ioe) {
+        } catch (RuntimeException ioe) {
             ioe.printStackTrace();
             fail();
         }
