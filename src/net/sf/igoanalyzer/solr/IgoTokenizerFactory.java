@@ -26,6 +26,13 @@ public class IgoTokenizerFactory extends BaseTokenizerFactory {
 
     @Override
     public Tokenizer create(final Reader reader) {
-        return new IgoTokenizer(reader, dicPath);
+        try {
+            if (dicPath == null) {
+                return new IgoTokenizer(reader);
+            }
+            return new IgoTokenizer(reader, dicPath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

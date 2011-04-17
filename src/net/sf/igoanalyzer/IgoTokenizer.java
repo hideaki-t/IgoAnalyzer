@@ -3,7 +3,6 @@
  */
 package net.sf.igoanalyzer;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.LinkedList;
@@ -12,11 +11,9 @@ import java.util.regex.Pattern;
 import net.reduls.igo.Morpheme;
 import net.reduls.igo.Tagger;
 import org.apache.lucene.analysis.Tokenizer;
-import org.apache.lucene.analysis.ja.NormalizeReader;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
-import org.apache.lucene.util.AttributeSource;
 
 /**
  * Igoを使ったTokenizer.
@@ -39,30 +36,28 @@ public final class IgoTokenizer extends Tokenizer {
     private int offset;
     /** 次回のオフセット */
     private int nextOffset;
-    private final StringBuilder buf = new StringBuilder();
+    private final StringBuilder buf = new StringBuilder(1024);
 
     /**
      * Igoで使うバイナリ辞書の場所を指定してインスタンスを作成する
      * @param input
      * @param path バイナリ辞書のパス
+     * @throws IOException
      */
-    public IgoTokenizer(final Reader input, final String path) {
-        super(new NormalizeReader(input));
-        try {
-            this.tagger = new Tagger(path);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    public IgoTokenizer(final Reader input, final String path) throws IOException {
+        super(input);
+        this.tagger = new Tagger(path);
     }
 
-    public IgoTokenizer(final Reader input) {
-        super(new NormalizeReader(input));
-        try {
-            String path = Tagger.class.getResource("/ipadic").getPath();
-            this.tagger = new Tagger(path);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    /**
+     * Igoで使うバイナリ辞書をクラスパスから探して、インスタンスを作成する
+     * @param input
+     * @throws IOException
+     */
+    public IgoTokenizer(final Reader input) throws IOException {
+        super(input);
+        String path = Tagger.class.getResource("/ipadic").getPath();
+        this.tagger = new Tagger(path);
     }
 
     /**
@@ -72,30 +67,6 @@ public final class IgoTokenizer extends Tokenizer {
      */
     public IgoTokenizer(final Reader input, final Tagger tagger) {
         super(input);
-        this.tagger = tagger;
-    }
-
-    /**
-     * 形態素解析器のインスタンスを指定してインスタンスを作成する
-     * @param source
-     * @param input
-     * @param tagger 形態素解析器のインスタンス
-     */
-    public IgoTokenizer(final AttributeSource source,
-            final Reader input, final Tagger tagger) {
-        super(source, input);
-        this.tagger = tagger;
-    }
-
-    /**
-     * 形態素解析器のインスタンスを指定してインスタンスを作成する
-     * @param factory
-     * @param input
-     * @param tagger 形態素解析器のインスタンス
-     */
-    public IgoTokenizer(final AttributeFactory factory,
-            final Reader input, final Tagger tagger) {
-        super(factory, input);
         this.tagger = tagger;
     }
 
@@ -136,7 +107,7 @@ public final class IgoTokenizer extends Tokenizer {
         nextOffset = 0;
     }
 
-    private final boolean read(final Matcher matcher) throws IOException {
+    private boolean read(final Matcher matcher) throws IOException {
         final char[] tbuf = new char[8];
         boolean eof = false;
         while (!eof && !matcher.find()) {
@@ -151,7 +122,7 @@ public final class IgoTokenizer extends Tokenizer {
         return eof;
     }
 
-    private void p(final Matcher matcher) {
+    private void parse(final Matcher matcher) {
         tagger.parse(matcher.group(), remainMorphemes);
         offset = nextOffset;
         nextOffset = offset + matcher.group().length();
@@ -166,7 +137,7 @@ public final class IgoTokenizer extends Tokenizer {
     private boolean parse() throws IOException {
         final Matcher matcher = punctuation.matcher(buf);
         if (matcher.find()) {
-            p(matcher);
+            parse(matcher);
         } else {
             if (read(matcher)) {
                 if (buf.length() != 0) {
@@ -176,7 +147,7 @@ public final class IgoTokenizer extends Tokenizer {
                     buf.setLength(0);
                 }
             } else {
-                p(matcher);
+                parse(matcher);
             }
         }
         return !remainMorphemes.isEmpty();

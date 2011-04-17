@@ -1,5 +1,6 @@
 package net.sf.igoanalyzer;
 
+import java.io.IOException;
 import java.io.Reader;
 import java.util.Set;
 import org.apache.lucene.analysis.LowerCaseFilter;
@@ -10,6 +11,8 @@ import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.ja.JapaneseBasicFormFilter;
 import org.apache.lucene.analysis.ja.JapaneseKatakanaStemFilter;
 import org.apache.lucene.analysis.ja.JapanesePartOfSpeechStopFilter;
+import org.apache.lucene.analysis.ja.JapanesePunctuationFilter;
+import org.apache.lucene.analysis.ja.NormalizeReader;
 import org.apache.lucene.util.Version;
 
 /**
@@ -17,6 +20,7 @@ import org.apache.lucene.util.Version;
  * @author hideaki
  */
 public class IgoAnalyzer extends StopwordAnalyzerBase {
+
     private final Set<String> stopTags;
 
     public IgoAnalyzer(Version version, Set<String> stopWords,
@@ -27,13 +31,17 @@ public class IgoAnalyzer extends StopwordAnalyzerBase {
 
     @Override
     protected TokenStreamComponents createComponents(String field, Reader reader) {
-        Tokenizer tokenizer = new IgoTokenizer(reader);
-        TokenStream stream = new org.apache.lucene.analysis.ja.JapanesePunctuationFilter(true, tokenizer);
-        stream = new JapaneseBasicFormFilter(tokenizer);
-        stream = new JapanesePartOfSpeechStopFilter(true, tokenizer, stopTags);
-        stream = new StopFilter(matchVersion, stream, stopwords);
-        stream = new LowerCaseFilter(matchVersion, stream);
-        stream = new JapaneseKatakanaStemFilter(stream);
-        return new TokenStreamComponents(tokenizer, stream);
+        try {
+            Tokenizer tokenizer = new IgoTokenizer(new NormalizeReader(reader));
+            TokenStream stream = new JapanesePunctuationFilter(true, tokenizer);
+            stream = new JapaneseBasicFormFilter(tokenizer);
+            stream = new JapanesePartOfSpeechStopFilter(true, tokenizer, stopTags);
+            stream = new StopFilter(matchVersion, stream, stopwords);
+            stream = new LowerCaseFilter(matchVersion, stream);
+            stream = new JapaneseKatakanaStemFilter(stream);
+            return new TokenStreamComponents(tokenizer, stream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
