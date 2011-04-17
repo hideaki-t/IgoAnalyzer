@@ -165,7 +165,6 @@ public final class IgoTokenizer extends Tokenizer {
     }
 
     private void parse(final Matcher matcher) {
-        System.err.println(matcher.group());
         parse(matcher.group());
         offset = nextOffset;
         nextOffset = offset + matcher.group().length();
