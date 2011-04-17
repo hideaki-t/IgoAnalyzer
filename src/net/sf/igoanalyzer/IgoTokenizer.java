@@ -5,12 +5,19 @@ package net.sf.igoanalyzer;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.reduls.igo.Morpheme;
 import net.reduls.igo.Tagger;
 import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.ja.tokenAttributes.BasicFormAttribute;
+import org.apache.lucene.analysis.ja.tokenAttributes.ConjugationAttribute;
+import org.apache.lucene.analysis.ja.tokenAttributes.PartOfSpeechAttribute;
+import org.apache.lucene.analysis.ja.tokenAttributes.PronunciationsAttribute;
+import org.apache.lucene.analysis.ja.tokenAttributes.ReadingsAttribute;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
@@ -30,7 +37,14 @@ public final class IgoTokenizer extends Tokenizer {
     private final OffsetAttribute offsetAttr = addAttribute(OffsetAttribute.class);
     private final TypeAttribute typeAttr = addAttribute(TypeAttribute.class);
     //private final PositionIncrementAttribute incrAttr = addAttribute(PositionIncrementAttribute.class);
-    
+
+    // lucene-gosen attribues
+    private final BasicFormAttribute basicFormAtt = addAttribute(BasicFormAttribute.class);
+    private final ConjugationAttribute conjugationAtt = addAttribute(ConjugationAttribute.class);
+    private final PartOfSpeechAttribute partOfSpeechAtt = addAttribute(PartOfSpeechAttribute.class);
+    private final PronunciationsAttribute pronunciationsAtt = addAttribute(PronunciationsAttribute.class);
+    private final ReadingsAttribute readingsAtt = addAttribute(ReadingsAttribute.class);
+
     private final Pattern punctuation = Pattern.compile(".+\\p{Po}");
     /** 今のオフセット */
     private int offset;
@@ -85,11 +99,28 @@ public final class IgoTokenizer extends Tokenizer {
         offsetAttr.setOffset(
                 correctOffset(start),
                 correctOffset(end));
-        typeAttr.setType(morpheme.feature);
         //incrAttr.setPositionIncrement(1);
+        setMorphologicalAttributes(morpheme);
+        typeAttr.setType(partOfSpeechAtt.getPartOfSpeech());
+
         // FlagsAttribute
         // PayloadAttribute
         return true;
+    }
+
+    private void setMorphologicalAttributes(Morpheme morpheme) {
+        // 品詞,品詞細分類1,品詞細分類2,品詞細分類3,活用形,活用型,原形,読み,発音
+        StringTokenizer st = new StringTokenizer(morpheme.feature, ",");
+        StringBuilder pos = new StringBuilder(st.nextToken());
+        pos.append('-').append(st.nextToken());
+        pos.append('-').append(st.nextToken());
+        pos.append('-').append(st.nextToken());
+        partOfSpeechAtt.setPartOfSpeech(pos.toString().replaceAll("-\\*", ""));
+        conjugationAtt.setConjugationalType(st.nextToken());
+        conjugationAtt.setConjugationalForm(st.nextToken());
+        basicFormAtt.setBasicForm(st.nextToken());
+        readingsAtt.setReadings(Arrays.asList(st.nextToken()));
+        pronunciationsAtt.setPronunciations(Arrays.asList(st.nextToken()));
     }
 
     @Override
