@@ -9,7 +9,7 @@ import org.apache.solr.analysis.BaseTokenizerFactory;
 
 /**
  * Tokenizer factory for IgoTokenizer.
- * @author hideaki
+ * @author Takahashi Hideaki <mymelo@gmail.com>
  */
 public class IgoTokenizerFactory extends BaseTokenizerFactory {
 

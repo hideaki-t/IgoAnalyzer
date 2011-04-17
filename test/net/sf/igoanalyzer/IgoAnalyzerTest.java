@@ -51,8 +51,7 @@ public class IgoAnalyzerTest {
         Reader reader = new StringReader("これはテストの文字列です。解析が出来たら成功です。おわり  ");
         try {
             IgoAnalyzer instance = new IgoAnalyzer(Version.LUCENE_31,
-                    new HashSet<String>(),
-                    new HashSet<String>());
+                    new HashSet<String>(), new HashSet<String>(), new HashSet<String>());
             TokenStream expResult = null;
             TokenStream result = instance.tokenStream(fieldName, reader);
             System.out.println(result);
@@ -75,7 +74,7 @@ public class IgoAnalyzerTest {
         Reader reader = new StringReader("これはテストの文字列です。解析が出来たら成功です。おわり");
         try {
             IgoAnalyzer instance = new IgoAnalyzer(Version.LUCENE_31,
-                    new HashSet<String>(), new HashSet<String>());
+                    new HashSet<String>(), new HashSet<String>(), new HashSet<String>());
             TokenStream expResult = null;
             TokenStream result = instance.reusableTokenStream(fieldName, reader);
             while (result.incrementToken()) {

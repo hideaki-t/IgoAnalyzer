@@ -1,12 +1,10 @@
-/**
- * Takahashi Hideaki <mymelo@gmail.com>
- */
 package net.sf.igoanalyzer;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,19 +16,21 @@ import org.apache.lucene.analysis.ja.tokenAttributes.ConjugationAttribute;
 import org.apache.lucene.analysis.ja.tokenAttributes.PartOfSpeechAttribute;
 import org.apache.lucene.analysis.ja.tokenAttributes.PronunciationsAttribute;
 import org.apache.lucene.analysis.ja.tokenAttributes.ReadingsAttribute;
+import org.apache.lucene.analysis.ja.tokenAttributes.SentenceStartAttribute;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 
 /**
  * Igoを使ったTokenizer.
+ * @author Takahashi Hideaki <mymelo@gmail.com>
  */
 public final class IgoTokenizer extends Tokenizer {
 
     /** 形態素解析器. */
     private final Tagger tagger;
     /** 1フレーズ分の形態素解析結果. */
-    private final LinkedList<Morpheme> remainMorphemes = new LinkedList<Morpheme>();
+    private final LinkedList<MorphemeHolder> remainMorphemes = new LinkedList<MorphemeHolder>();
 
     // attributes
     private final CharTermAttribute termAttr = addAttribute(CharTermAttribute.class);
@@ -39,13 +39,15 @@ public final class IgoTokenizer extends Tokenizer {
     //private final PositionIncrementAttribute incrAttr = addAttribute(PositionIncrementAttribute.class);
 
     // lucene-gosen attribues
-    private final BasicFormAttribute basicFormAtt = addAttribute(BasicFormAttribute.class);
-    private final ConjugationAttribute conjugationAtt = addAttribute(ConjugationAttribute.class);
-    private final PartOfSpeechAttribute partOfSpeechAtt = addAttribute(PartOfSpeechAttribute.class);
-    private final PronunciationsAttribute pronunciationsAtt = addAttribute(PronunciationsAttribute.class);
-    private final ReadingsAttribute readingsAtt = addAttribute(ReadingsAttribute.class);
+    private final BasicFormAttribute basicFormAttr = addAttribute(BasicFormAttribute.class);
+    private final ConjugationAttribute conjugationAttr = addAttribute(ConjugationAttribute.class);
+    private final PartOfSpeechAttribute partOfSpeechAttr = addAttribute(PartOfSpeechAttribute.class);
+    private final PronunciationsAttribute pronunciationsAttr = addAttribute(PronunciationsAttribute.class);
+    private final ReadingsAttribute readingsAttr = addAttribute(ReadingsAttribute.class);
 
-    private final Pattern punctuation = Pattern.compile(".+\\p{Po}");
+    private final SentenceStartAttribute sentenceAttr = addAttribute(SentenceStartAttribute.class);
+
+    private final Pattern punctuation = Pattern.compile(".+?\\p{Po}+");
     /** 今のオフセット */
     private int offset;
     /** 次回のオフセット */
@@ -86,13 +88,12 @@ public final class IgoTokenizer extends Tokenizer {
 
     @Override
     public boolean incrementToken() throws IOException {
-        clearAttributes();
-        if (remainMorphemes.isEmpty()) {
-            if (!parse()) {
-                return false;
-            }
+        if (remainMorphemes.isEmpty() && !parse()) {
+            return false;
         }
-        final Morpheme morpheme = remainMorphemes.removeFirst();
+        clearAttributes();
+        MorphemeHolder holder = remainMorphemes.removeFirst();
+        final Morpheme morpheme = holder.morpheme;
         final int start = offset + morpheme.start;
         final int end = start + morpheme.surface.length();
         termAttr.setEmpty().append(morpheme.surface);
@@ -101,8 +102,8 @@ public final class IgoTokenizer extends Tokenizer {
                 correctOffset(end));
         //incrAttr.setPositionIncrement(1);
         setMorphologicalAttributes(morpheme);
-        typeAttr.setType(partOfSpeechAtt.getPartOfSpeech());
-
+        typeAttr.setType(partOfSpeechAttr.getPartOfSpeech());
+        sentenceAttr.setSentenceStart(holder.sentenceStart);
         // FlagsAttribute
         // PayloadAttribute
         return true;
@@ -115,12 +116,12 @@ public final class IgoTokenizer extends Tokenizer {
         pos.append('-').append(st.nextToken());
         pos.append('-').append(st.nextToken());
         pos.append('-').append(st.nextToken());
-        partOfSpeechAtt.setPartOfSpeech(pos.toString().replaceAll("-\\*", ""));
-        conjugationAtt.setConjugationalType(st.nextToken());
-        conjugationAtt.setConjugationalForm(st.nextToken());
-        basicFormAtt.setBasicForm(st.nextToken());
-        readingsAtt.setReadings(Arrays.asList(st.nextToken()));
-        pronunciationsAtt.setPronunciations(Arrays.asList(st.nextToken()));
+        partOfSpeechAttr.setPartOfSpeech(pos.toString().replaceAll("-\\*", ""));
+        conjugationAttr.setConjugationalType(st.nextToken());
+        conjugationAttr.setConjugationalForm(st.nextToken());
+        basicFormAttr.setBasicForm(st.nextToken());
+        readingsAttr.setReadings(Arrays.asList(st.nextToken()));
+        pronunciationsAttr.setPronunciations(Arrays.asList(st.nextToken()));
     }
 
     @Override
@@ -153,11 +154,29 @@ public final class IgoTokenizer extends Tokenizer {
         return eof;
     }
 
+    private void parse(final CharSequence seq) {
+        List<Morpheme> ml = tagger.parse(seq);
+        if (!ml.isEmpty()) {
+            remainMorphemes.add(new MorphemeHolder(ml.remove(0), true));
+        }
+        for (Morpheme m: ml) {
+            remainMorphemes.add(new MorphemeHolder(m, false));
+        }
+    }
+
     private void parse(final Matcher matcher) {
-        tagger.parse(matcher.group(), remainMorphemes);
+        System.err.println(matcher.group());
+        parse(matcher.group());
         offset = nextOffset;
         nextOffset = offset + matcher.group().length();
         buf.delete(0, matcher.end());
+    }
+
+    private void parseAtEof(final StringBuilder buf) {
+        parse(buf);
+        offset = nextOffset;
+        nextOffset = offset + buf.length();
+        buf.setLength(0);
     }
 
     /**
@@ -171,11 +190,9 @@ public final class IgoTokenizer extends Tokenizer {
             parse(matcher);
         } else {
             if (read(matcher)) {
+                // EOF
                 if (buf.length() != 0) {
-                    tagger.parse(buf, remainMorphemes);
-                    offset = nextOffset;
-                    nextOffset = offset + buf.length();
-                    buf.setLength(0);
+                    parseAtEof(buf);
                 }
             } else {
                 parse(matcher);
