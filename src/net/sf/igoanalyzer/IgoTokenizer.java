@@ -2,10 +2,8 @@ package net.sf.igoanalyzer;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.reduls.igo.Morpheme;
@@ -91,6 +89,7 @@ public final class IgoTokenizer extends Tokenizer {
         if (remainMorphemes.isEmpty() && !parse()) {
             return false;
         }
+        try {
         clearAttributes();
         MorphemeHolder holder = remainMorphemes.removeFirst();
         final Morpheme morpheme = holder.morpheme;
@@ -107,21 +106,40 @@ public final class IgoTokenizer extends Tokenizer {
         // FlagsAttribute
         // PayloadAttribute
         return true;
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
-    private void setMorphologicalAttributes(Morpheme morpheme) {
+    private void setMorphologicalAttributes(final Morpheme morpheme) {
+        // IPADIC依存
         // 品詞,品詞細分類1,品詞細分類2,品詞細分類3,活用形,活用型,原形,読み,発音
-        StringTokenizer st = new StringTokenizer(morpheme.feature, ",");
-        StringBuilder pos = new StringBuilder(st.nextToken());
-        pos.append('-').append(st.nextToken());
-        pos.append('-').append(st.nextToken());
-        pos.append('-').append(st.nextToken());
-        partOfSpeechAttr.setPartOfSpeech(pos.toString().replaceAll("-\\*", ""));
-        conjugationAttr.setConjugationalType(st.nextToken());
-        conjugationAttr.setConjugationalForm(st.nextToken());
-        basicFormAttr.setBasicForm(st.nextToken());
-        readingsAttr.setReadings(Arrays.asList(st.nextToken()));
-        pronunciationsAttr.setPronunciations(Arrays.asList(st.nextToken()));
+        int pos = morpheme.feature.indexOf(',');
+        int pos1 = morpheme.feature.indexOf(',', pos + 1);
+        int pos2 = morpheme.feature.indexOf(',', pos1 + 1);
+        int pos3 = morpheme.feature.indexOf(',', pos2 + 1);
+        int form = morpheme.feature.indexOf(',', pos3 + 1);
+        int type = morpheme.feature.indexOf(',', form + 1);
+        int basic = morpheme.feature.indexOf(',', type + 1);
+        int reading = morpheme.feature.indexOf(',', basic + 1);
+        int pronun = morpheme.feature.indexOf(',', reading + 1);
+
+        net.java.sen.dictionary.Morpheme m =
+                new net.java.sen.dictionary.Morpheme(
+                morpheme.feature.substring(0, pos3).replaceAll(",", "-").replaceAll("-\\*", ""),
+                morpheme.feature.substring(pos3 + 1, form),
+                morpheme.feature.substring(form + 1, type),
+                morpheme.feature.substring(type + 1, basic),
+                new String[]{reading != -1 ? morpheme.feature.substring(basic + 1, reading) : ""},
+                new String[]{pronun != -1 ? morpheme.feature.substring(reading + 1, pronun) : ""},
+                null);
+        partOfSpeechAttr.setMorpheme(m);
+        conjugationAttr.setMorpheme(m);
+        conjugationAttr.setMorpheme(m);
+        basicFormAttr.setMorpheme(m);
+        readingsAttr.setMorpheme(m);
+        pronunciationsAttr.setMorpheme(m);
     }
 
     @Override
