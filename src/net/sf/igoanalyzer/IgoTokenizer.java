@@ -48,7 +48,7 @@ public final class IgoTokenizer extends Tokenizer {
     private int offset;
     /** 次回のオフセット */
     private int nextOffset;
-    private final StringBuilder buf = new StringBuilder(1024);
+    private final StringBuilder buf = new StringBuilder(8192);
 
     /**
      * Igoで使うバイナリ辞書の場所を指定してインスタンスを作成する
@@ -117,8 +117,8 @@ public final class IgoTokenizer extends Tokenizer {
                 new net.java.sen.dictionary.Morpheme(
                 sb.toString().replaceAll("-\\*", ""), p[4], p[5],
                 p[6] != null ? p[6] : "*",
-                new String[]{p[7] != null ? p[7] : "*"},
-                new String[]{p[8] != null ? p[8] : "*"},
+                new String[]{p.length > 7 ? p[7] : "*"},
+                new String[]{p.length > 8 ? p[8] : "*"},
                 null);
         basicFormAttr.setMorpheme(m);
         conjugationAttr.setMorpheme(m);
@@ -143,7 +143,7 @@ public final class IgoTokenizer extends Tokenizer {
     }
 
     private boolean read(final Matcher matcher) throws IOException {
-        final char[] tbuf = new char[8];
+        final char[] tbuf = new char[8192];
         boolean eof = false;
         while (!eof && !matcher.find()) {
             final int r = input.read(tbuf);
